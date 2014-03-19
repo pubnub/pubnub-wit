@@ -1,15 +1,36 @@
 <html>
 <head>
   <link rel="stylesheet" href="microphone.css">
+  <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
 </head>
-<body style="text-align: center;">
+<body>
 
-  <div id="microphone"></div>
-  <pre id="result"></pre>
-  <div id="info"></div>
-  <script src="microphone.js"></script>
-  <div id="box"></div>
-  <input type="text" id="input">
+  <div class="container">
+
+    <div class="row">
+      <div class="col-md-3">
+      </div>
+      <div class="col-md-6">
+
+        <div class="well">
+          <div id="box"></div>
+        </div>
+
+        <div class="well">
+
+          <div id="microphone"></div>
+          <script src="microphone.js"></script>
+          <div id="info"></div>
+
+        </div>
+
+      </div>
+      <div class="col-md-3">
+      </div>
+    </div>
+
+  </div>
 
   <!-- http://www.pubnub.com/blog/build-real-time-chat-10-lines-code/ -->
   <script src="http://cdn.pubnub.com/pubnub.min.js"></script>
@@ -18,7 +39,6 @@
 
     var
       box = PUBNUB.$('box'),
-      input = PUBNUB.$('input'),
       channel = 'my_channel';
 
     PUBNUB.subscribe({
@@ -26,14 +46,6 @@
       callback: function(text) {
         box.innerHTML = (''+text).replace( /[<>]/g, '' ) + '<br>' + box.innerHTML
       }
-    });
-
-    PUBNUB.bind( 'keyup', input, function(e) {
-      (e.keyCode || e.charCode) === 13 && PUBNUB.publish({
-        channel: channel,
-        message: input.value,
-        x: (input.value='')
-      });
     });
 
     var mic = new Wit.Microphone(document.getElementById("microphone"));
@@ -56,14 +68,14 @@
 
     mic.onresult = function (intent, entities) {
 
-      document.getElementById("result").innerHTML = intent;
-
       if (intent == "message") {
 
-        PUBNUB.publish({
-          channel: channel,
-          message: entities.message_body.body
-        });
+        if(typeof entities.message_body !== "undefined") {
+          PUBNUB.publish({
+            channel: channel,
+            message: entities.message_body.body
+          });
+        }
 
       }
 
