@@ -9,19 +9,23 @@
   <div id="info"></div>
   <script src="microphone.js"></script>
   <div id="box"></div>
+  <input type="text" id="input">
 
   <!-- http://www.pubnub.com/blog/build-real-time-chat-10-lines-code/ -->
   <script src="http://cdn.pubnub.com/pubnub.min.js"></script>
-  <script>
-  (function(){
 
-    var box = PUBNUB.$('box'),
+  <script>
+
+    var
+      box = PUBNUB.$('box'),
       input = PUBNUB.$('input'),
-      channel = 'chat';
+      channel = 'my_channel';
 
     PUBNUB.subscribe({
-      channel : channel,
-      callback : function(text) { box.innerHTML = (''+text).replace( /[<>]/g, '' ) + '<br>' + box.innerHTML }
+      channel: channel,
+      callback: function(text) {
+        box.innerHTML = (''+text).replace( /[<>]/g, '' ) + '<br>' + box.innerHTML
+      }
     });
 
     PUBNUB.bind( 'keyup', input, function(e) {
@@ -30,8 +34,7 @@
         message: input.value,
         x: (input.value='')
       });
-      });
-    })();
+    });
 
     var mic = new Wit.Microphone(document.getElementById("microphone"));
 
@@ -50,12 +53,19 @@
     mic.onerror = function (err) {
       info("Error: " + err);
     };
+
     mic.onresult = function (intent, entities) {
 
-      console.log(intent);
-      console.log(entities.message_body.body);
-
       document.getElementById("result").innerHTML = intent;
+
+      if (intent == "message") {
+
+        PUBNUB.publish({
+          channel: channel,
+          message: entities.message_body.body
+        });
+
+      }
 
     };
 
