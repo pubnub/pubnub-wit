@@ -8,25 +8,46 @@
 
   <div class="container">
 
+
+    <div class="row">
+      <div class="col-md-12">
+        <h2>PubNub + Wit Demo</h2>
+        <hr />
+      </div>
+    </div>
+
     <div class="row">
       <div class="col-md-3">
+        <h3>About</h3>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin eu ullamcorper lectus. Vestibulum nibh lectus, porta vitae aliquet facilisis, dignissim sed lorem. Phasellus at sapien sed turpis porta venenatis eu sit amet metus. Aenean vitae tincidunt arcu. </p>
+        <p>Aenean pellentesque ullamcorper egestas. Cras adipiscing pellentesque iaculis. Vivamus eget erat lacinia, accumsan eros et, eleifend nibh. Ut in odio vel velit convallis vestibulum sit amet vel turpis. Integer luctus est ultrices sem porttitor auctor. Curabitur at enim nisi. </p>
       </div>
       <div class="col-md-6">
 
+        <h3>Chat Output</h3>
         <div class="well">
           <div id="box"></div>
         </div>
 
-        <div class="well">
+        <hr />
 
-          <div id="microphone"></div>
+        <h3>Send A Message</h3>
+        <div class="well" style="text-align: center;">
+
+          <div id="microphone" style="margin: auto;"></div>
           <script src="microphone.js"></script>
-          <div id="info"></div>
+          <div id="info" class="text-muted">Click 'Allow' to use your microphone.</div>
 
         </div>
 
       </div>
       <div class="col-md-3">
+
+        <h3>Who's Online</h3>
+        <div class="well">
+          <ul id="online"></ul>
+        </div>
+
       </div>
     </div>
 
@@ -37,15 +58,29 @@
 
   <script>
 
+    var animals = ['pigeon', 'sea gull', 'bat', 'owl', 'sparrows', 'robin', 'bluebird', 'cardinal', 'hawk', 'fish', 'shrimp', 'frog', 'whale', 'shark', 'eel', 'seal', 'lobster', 'octopus', 'mole', 'shrew', 'rabbit', 'chipmunk', 'armadillo', 'dog', 'cat', 'lynx', 'mouse', 'lion', 'moose', 'horse', 'deer', 'raccoon', 'zebra', 'goat', 'cow', 'pig', 'tiger', 'wolf', 'pony', 'antelope', 'buffalo', 'camel', 'donkey', 'elk', 'fox', 'monkey', 'gazelle', 'impala', 'jaguar', 'leopard', 'lemur', 'yak', 'elephant', 'giraffe', 'hippopotamus', 'rhinoceros', 'grizzly bear']
+
+    var colors = ['silver', 'gray', 'black', 'red', 'maroon', 'olive', 'lime', 'green', 'teal', 'blue', 'navy', 'fuchsia', 'purple'];
+
+    var animalName = animals[Math.floor(Math.random() * animals.length)];
+    var stateColor = colors[Math.floor(Math.random() * colors.length)];
+    var stateName = stateColor + ' ' + animalName;
+
     var
       box = PUBNUB.$('box'),
-      channel = 'my_channel';
+      channel = 'pubnub_audio_chat',
+      uuid = PUBNUB.uuid();
+
+    console.log('I am ' + stateName);
 
     PUBNUB.subscribe({
+      backfill: true,
       channel: channel,
-      callback: function(text) {
-        box.innerHTML = (''+text).replace( /[<>]/g, '' ) + '<br>' + box.innerHTML
-      }
+      callback: function(m) {
+        box.innerHTML = m.name + ': ' + (''+m.message).replace( /[<>]/g, '' ) + '<br>' + box.innerHTML
+      },
+      state: {name: stateName, color: stateColor},
+      uuid: uuid
     });
 
     var mic = new Wit.Microphone(document.getElementById("microphone"));
@@ -57,7 +92,7 @@
       info("Microphone is ready to record");
     };
     mic.onaudiostart = function () {
-      info("Recording started");
+      info("Say 'Send a message' followed by your message.");
     };
     mic.onaudioend = function () {
       info("Recording stopped, processing started");
@@ -73,13 +108,35 @@
         if(typeof entities.message_body !== "undefined") {
           PUBNUB.publish({
             channel: channel,
-            message: entities.message_body.body
+            message: {message: entities.message_body.body, name: stateName, color: stateColor}
           });
         }
 
       }
 
     };
+
+    setInterval(function(){
+      PUBNUB.here_now({
+        channel: channel,
+        state: true,
+        callback: function(m){
+
+          var newHTML = '';
+          var online = document.getElementById("online");
+
+          console.log(m.uuids)
+
+          for(var i = 0; i < m.uuids.length; i++) {
+            newHTML += '<li style="color: ' + m.uuids[i].state.color + '">' + m.uuids[i].state.name +'</li>';
+          }
+
+          console.log(newHTML);
+          online.innerHTML = newHTML;
+
+        }
+      });
+    }, 1000);
 
     mic.connect("PYKE2SEOG5SO46P2XMUXQOJTA77MT6FH");
 
