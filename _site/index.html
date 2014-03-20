@@ -77,7 +77,9 @@
       backfill: true,
       channel: channel,
       callback: function(m) {
-        box.innerHTML = m.name + ': ' + (''+m.message).replace( /[<>]/g, '' ) + '<br>' + box.innerHTML
+        if(m.type == "message") {
+          box.innerHTML = m.data.name + ': ' + (''+m.data.message).replace( /[<>]/g, '' ) + '<br>' + box.innerHTML;
+        }
       },
       state: {name: stateName, color: stateColor},
       uuid: uuid
@@ -103,15 +105,20 @@
 
     mic.onresult = function (intent, entities) {
 
+      console.log(intent)
+      console.log(entities)
+
       if (intent == "message") {
 
         if(typeof entities.message_body !== "undefined") {
           PUBNUB.publish({
             channel: channel,
-            message: {message: entities.message_body.body, name: stateName, color: stateColor}
+            message: {type: 'message', data: {message: entities.message_body.body, name: stateName, color: stateColor}}
           });
         }
 
+      } else {
+        alert('We can\'t understand what you\'re trying to do!');
       }
 
     };
@@ -125,18 +132,15 @@
           var newHTML = '';
           var online = document.getElementById("online");
 
-          console.log(m.uuids)
-
           for(var i = 0; i < m.uuids.length; i++) {
             newHTML += '<li style="color: ' + m.uuids[i].state.color + '">' + m.uuids[i].state.name +'</li>';
           }
 
-          console.log(newHTML);
           online.innerHTML = newHTML;
 
         }
       });
-    }, 1000);
+    }, 3000);
 
     mic.connect("PYKE2SEOG5SO46P2XMUXQOJTA77MT6FH");
 
