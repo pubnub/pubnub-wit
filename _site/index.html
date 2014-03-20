@@ -3,30 +3,35 @@
   <link rel="stylesheet" href="microphone.css">
   <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
   <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 </head>
 <body>
 
-  <div class="container">
-
+  <div class="container-fluid">
 
     <div class="row">
+
       <div class="col-md-12">
         <h2>PubNub + Wit Demo</h2>
         <hr />
       </div>
+
     </div>
 
     <div class="row">
+
       <div class="col-md-3">
         <h3>About</h3>
         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin eu ullamcorper lectus. Vestibulum nibh lectus, porta vitae aliquet facilisis, dignissim sed lorem. Phasellus at sapien sed turpis porta venenatis eu sit amet metus. Aenean vitae tincidunt arcu. </p>
         <p>Aenean pellentesque ullamcorper egestas. Cras adipiscing pellentesque iaculis. Vivamus eget erat lacinia, accumsan eros et, eleifend nibh. Ut in odio vel velit convallis vestibulum sit amet vel turpis. Integer luctus est ultrices sem porttitor auctor. Curabitur at enim nisi. </p>
       </div>
+
       <div class="col-md-6">
 
         <h3>Chat Output</h3>
+
         <div class="well">
-          <div id="box"></div>
+          <div id="chat-output"></div>
         </div>
 
         <hr />
@@ -53,7 +58,6 @@
 
   </div>
 
-  <!-- http://www.pubnub.com/blog/build-real-time-chat-10-lines-code/ -->
   <script src="http://cdn.pubnub.com/pubnub.min.js"></script>
 
   <script>
@@ -66,20 +70,46 @@
     var stateColor = colors[Math.floor(Math.random() * colors.length)];
     var stateName = stateColor + ' ' + animalName;
 
+    console.log('I am ' + stateName);
+
+    var $user = function(id, name, color) {
+      return $('<li id="' + id + '" style="color: ' + color + '">' + name +'</li>');
+    }
+
     var
-      box = PUBNUB.$('box'),
+      $output = $('#chat-output'),
+      $online = $('#online'),
       channel = 'pubnub_audio_chat',
       uuid = PUBNUB.uuid();
-
-    console.log('I am ' + stateName);
 
     PUBNUB.subscribe({
       backfill: true,
       channel: channel,
-      callback: function(m) {
-        if(m.type == "message") {
-          box.innerHTML = m.data.name + ': ' + (''+m.data.message).replace( /[<>]/g, '' ) + '<br>' + box.innerHTML;
+      presence: function(m) {
+
+        if(typeof m.data !== "undefined") {
+
+          if(m.action == "join") {
+            $online.append($user(m.uuid, m.data.name, m.data.color));
+          } else {
+            $('#' + m.uuid).remove();
+          }
+
         }
+
+      },
+      callback: function(m) {
+
+        if(m.type == "message") {
+
+          $output.append('\
+            <div class="line"> \
+              <span class="name">' + m.data.name + ':<span> \
+              <span class="message">' + (''+m.data.message).replace( /[<>]/g, '' ) + '</span> \
+            </div>');
+
+        }
+
       },
       state: {name: stateName, color: stateColor},
       uuid: uuid
@@ -105,9 +135,6 @@
 
     mic.onresult = function (intent, entities) {
 
-      console.log(intent)
-      console.log(entities)
-
       if (intent == "message") {
 
         if(typeof entities.message_body !== "undefined") {
@@ -123,24 +150,15 @@
 
     };
 
-    setInterval(function(){
-      PUBNUB.here_now({
-        channel: channel,
-        state: true,
-        callback: function(m){
-
-          var newHTML = '';
-          var online = document.getElementById("online");
-
-          for(var i = 0; i < m.uuids.length; i++) {
-            newHTML += '<li style="color: ' + m.uuids[i].state.color + '">' + m.uuids[i].state.name +'</li>';
-          }
-
-          online.innerHTML = newHTML;
-
+    PUBNUB.here_now({
+      channel: channel,
+      state: true,
+      callback: function(m){
+        for(var i = 0; i < m.uuids.length; i++) {
+          $online.append($user(m.uuids[i].uuid, m.uuids[i].state.name, m.uuids[i].state.color));
         }
-      });
-    }, 3000);
+      }
+    });
 
     mic.connect("PYKE2SEOG5SO46P2XMUXQOJTA77MT6FH");
 
