@@ -70,10 +70,8 @@
     var stateColor = colors[Math.floor(Math.random() * colors.length)];
     var stateName = stateColor + ' ' + animalName;
 
-    console.log('I am ' + stateName);
-
     var $user = function(id, name, color) {
-      return $('<li id="' + id + '" style="color: ' + color + '">' + name +'</li>');
+      return $('<li class="user" id="' + id + '"><span class="name">' + name +'</span><span class="interact"></span></li>');
     }
 
     var
@@ -82,17 +80,21 @@
       channel = 'pubnub_audio_chat',
       uuid = PUBNUB.uuid();
 
+    console.log('I am ' + stateName + ' with uuid ' + uuid);
+
     PUBNUB.subscribe({
-      backfill: true,
+      backfill: false,
       channel: channel,
       presence: function(m) {
+
+        console.log(m)
 
         if(typeof m.data !== "undefined") {
 
           if(m.action == "join") {
-            $online.append($user(m.uuid, m.data.name, m.data.color));
+            $online.append($user(m.data.uuid, m.data.name, m.data.color));
           } else {
-            $('#' + m.uuid).remove();
+            $('#' + m.data.uuid).remove();
           }
 
         }
@@ -107,11 +109,19 @@
               <span class="name">' + m.data.name + ':<span> \
               <span class="message">' + (''+m.data.message).replace( /[<>]/g, '' ) + '</span> \
             </div>');
+        }
 
+        if(m.type == 'interact') {
+
+          if(m.data.type == "done" || m.data.type == "error") {
+            $('#' + m.data.id + ' .interact').text('');
+          } else {
+            $('#' + m.data.id + ' .interact').text(m.data.type);
+          }
         }
 
       },
-      state: {name: stateName, color: stateColor},
+      state: {name: stateName, color: stateColor, id: uuid},
       uuid: uuid
     });
 
@@ -124,24 +134,52 @@
       info("Microphone is ready to record");
     };
     mic.onaudiostart = function () {
+
       info("Say 'Send a message' followed by your message.");
+
+      PUBNUB.publish({
+        channel: channel,
+        message: {type: 'interact', data: {type: 'speaking', uuid: uuid}}
+      });
+
     };
     mic.onaudioend = function () {
+
       info("Recording stopped, processing started");
+
+      PUBNUB.publish({
+        channel: channel,
+        message: {type: 'interact', data: {type: 'processing', uuid: uuid}}
+      });
+
     };
     mic.onerror = function (err) {
+
       info("Error: " + err);
+
+      PUBNUB.publish({
+        channel: channel,
+        message: {type: 'interact', data: {type: 'error', uuid: uuid}}
+      });
+
     };
 
     mic.onresult = function (intent, entities) {
 
+      PUBNUB.publish({
+        channel: channel,
+        message: {type: 'interact', data: {type: 'done', uuid: uuid}}
+      });
+
       if (intent == "message") {
 
         if(typeof entities.message_body !== "undefined") {
+
           PUBNUB.publish({
             channel: channel,
             message: {type: 'message', data: {message: entities.message_body.body, name: stateName, color: stateColor}}
           });
+
         }
 
       } else {
@@ -155,7 +193,7 @@
       state: true,
       callback: function(m){
         for(var i = 0; i < m.uuids.length; i++) {
-          $online.append($user(m.uuids[i].uuid, m.uuids[i].state.name, m.uuids[i].state.color));
+          $online.append($user(m.uuids[i].state.id, m.uuids[i].state.name, m.uuids[i].state.color));
         }
       }
     });
